@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{bd5d2df6-a412-48d8-a0c9-d220dccb92d3}</ProjectGuid>
+    <RootNamespace>DxTimingCaptureLibrary</RootNamespace>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <TargetName>DxTimingCaptureLibrary</TargetName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(IsLinux)' == 'true'">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <!-- After Microsoft.Cpp.props so the default per-configuration OutDir is set;
+       otherwise this resolves to a relative lib\ shared by every configuration. -->
+  <PropertyGroup>
+    <OutDir>$(OutDir)lib\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>
+        %(AdditionalOptions)
+      </AdditionalOptions>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories);
+        $(PixEventDecoderPath)\include;
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="AllocationTracker.cpp" />
+    <ClCompile Include="D3D12ObjectProcessor.cpp" />
+    <ClCompile Include="DxTimingCaptureEventHandler.cpp" />
+    <ClCompile Include="PixEventDecoderStub.cpp" Condition="'$(UseStubPixEventDecoder)' == 'true'" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AdapterTracker.h" />
+    <ClInclude Include="DirectStorageProcessor.h" />
+    <ClInclude Include="DxTimingCaptureProcessor.h" />
+    <ClInclude Include="Identifiers.h" />
+    <ClInclude Include="MemoryCounterWriter.h" />
+    <ClInclude Include="MonitorTracker.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="PerProcessData.h" />
+    <ClInclude Include="AllocationTracker.h" />
+    <ClInclude Include="D3D12ObjectProcessor.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

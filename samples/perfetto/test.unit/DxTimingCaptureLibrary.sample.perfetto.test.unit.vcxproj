@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{5B7C1D4E-2A63-49F8-8E10-6C9B3D2A7F41}</ProjectGuid>
+    <ConfigurationType>Application</ConfigurationType>
+    <RootNamespace>WinPix</RootNamespace>
+    <TargetName>DxTimingCaptureLibrary.sample.perfetto.test.unit</TargetName>
+    <TestCode>true</TestCode>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>
+        $(GoogleTestPath)\googletest\include;
+        $(PixEventDecoderPath)\include;
+        $(PerfettoPath)\sdk;
+        $(DxTimingCaptureLibraryRoot)\samples\perfetto;
+        $(DxTimingCaptureLibraryRoot)\samples\perfetto\test.common;
+        %(AdditionalIncludeDirectories);
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);ws2_32.lib;</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="GpuWorkAttributionTests.cpp" />
+    <ClCompile Include="$(DxTimingCaptureLibraryRoot)\samples\perfetto\test.common\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <!-- The sample's writer is tested in place rather than duplicated. It and the
+         trace reader are the only TUs that include perfetto.h, which is large and
+         not written for /permissive-. -->
+    <ClCompile Include="$(DxTimingCaptureLibraryRoot)\samples\perfetto\PerfettoTraceWriter.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <ClCompile Include="$(DxTimingCaptureLibraryRoot)\samples\perfetto\test.common\PerfettoTraceReader.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(DxTimingCaptureLibraryRoot)\samples\perfetto\test.common\pch.h" />
+    <ClInclude Include="$(DxTimingCaptureLibraryRoot)\samples\perfetto\test.common\PerfettoTraceReader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- In a UsePixUtility build, EtwException.h resolves to PIX's
+         WinPix::ToolException (see DxTimingCaptureLibrary/EtwException.h), whose out-of-line
+         symbols live in PixUtility.lib. A standalone build of the library uses the
+         self-contained EtwException and does not need this reference. -->
+    <ProjectReference Condition="'$(UsePixUtility)' == 'true'" Include="$(PixUtilityRoot)\lib\PixUtility.vcxproj">
+      <Project>{6591c7c3-cf78-4150-992d-5e0c0d13e609}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(GoogleTestPath)\googletest_main.vcxproj">
+      <Project>{14629fee-0926-4914-b534-87cd33cbc8ca}</Project>
+    </ProjectReference>
+    <ProjectReference Condition="'$(UseStubPixEventDecoder)' != 'true'" Include="$(PixEventDecoderPath)\lib\PixEventDecoder.lib.vcxproj">
+      <Project>{750cf23a-1b4a-4f62-acb7-45fe8b78a7a7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(DxTimingCaptureLibraryRoot)\lib\DxTimingCaptureLibrary.lib.vcxproj">
+      <Project>{bd5d2df6-a412-48d8-a0c9-d220dccb92d3}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(PerfettoPath)\perfetto.vcxproj">
+      <Project>{c7e5a2f0-8b3d-4e6a-9f12-3c4d5e6f7a80}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

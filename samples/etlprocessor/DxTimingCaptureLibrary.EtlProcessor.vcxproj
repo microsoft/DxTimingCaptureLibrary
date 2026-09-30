@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{B5C0E40C-A234-4F32-B7CE-57B5F20D8CF4}</ProjectGuid>
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>DxTimingCaptureLibrary.EtlProcessor</TargetName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories);
+        $(PixEventDecoderPath)\include;
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EntryPointSymbol>wmainCRTStartup</EntryPointSymbol>
+      <AdditionalDependencies>
+        %(AdditionalDependencies);
+        onecore.lib;
+        uuid.lib;
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AllocationTracker.h" />
+    <ClInclude Include="CsvTableWriter.h" />
+    <ClInclude Include="HistoryBufferProcessor.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="PidFinderProcessor.h" />
+    <ClInclude Include="ProcessEtlFile.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- In a UsePixUtility build, EtwException.h resolves to PIX's
+         WinPix::ToolException (see DxTimingCaptureLibrary/EtwException.h), whose out-of-line
+         symbols live in PixUtility.lib. A standalone build of the library uses the
+         self-contained EtwException and does not need this reference. -->
+    <ProjectReference Condition="'$(UsePixUtility)' == 'true'" Include="$(PixUtilityRoot)\lib\PixUtility.vcxproj">
+      <Project>{6591c7c3-cf78-4150-992d-5e0c0d13e609}</Project>
+    </ProjectReference>
+    <ProjectReference Condition="'$(UseStubPixEventDecoder)' != 'true'" Include="$(PixEventDecoderPath)\lib\PixEventDecoder.lib.vcxproj">
+      <Project>{750cf23a-1b4a-4f62-acb7-45fe8b78a7a7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(DxTimingCaptureLibraryRoot)\lib\DxTimingCaptureLibrary.lib.vcxproj">
+      <Project>{bd5d2df6-a412-48d8-a0c9-d220dccb92d3}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- Standalone (GitHub) builds pull the DirectStorage headers that EtwDispatcher.h
+       needs from a NuGet package; the in-PIX build resolves them from the source tree. -->
+  <ItemGroup Condition="'$(DxTimingCaptureStandaloneBuild)' == 'true'">
+    <PackageReference Include="Microsoft.Direct3D.DirectStorage" Version="1.3.0" GeneratePathProperty="true" PrivateAssets="all" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(DxTimingCaptureStandaloneBuild)' == 'true' and '$(DirectStorageSdk)' == ''">
+    <DirectStorageSdk>$(PkgMicrosoft_Direct3D_DirectStorage)</DirectStorageSdk>
+  </PropertyGroup>
+  <Import Project="$(DirectStorageSdk)\build\native\targets\Microsoft.Direct3D.DirectStorage.targets" Condition="Exists('$(DirectStorageSdk)\build\native\targets\Microsoft.Direct3D.DirectStorage.targets')" />
+</Project>

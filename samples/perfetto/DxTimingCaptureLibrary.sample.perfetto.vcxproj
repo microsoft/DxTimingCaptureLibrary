@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{D8F6B3A1-9C4E-5F7B-A023-4D5E6F7A8B90}</ProjectGuid>
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>DxTimingCaptureLibrary.sample.perfetto</TargetName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <!-- perfetto.h is large and not written for /permissive-; relax conformance
+           and allow big objects for this project. -->
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>
+        $(PerfettoPath)\sdk;
+        $(PixEventDecoderPath)\include;
+        $(DxTimingCaptureLibraryRoot)\samples\basic;
+        %(AdditionalIncludeDirectories);
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <!-- The only TU that includes perfetto.h; it does not use our PCH. -->
+    <ClCompile Include="PerfettoTraceWriter.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="PerfettoCategories.h" />
+    <ClInclude Include="PerfettoCallbacks.h" />
+    <ClInclude Include="PerfettoTraceWriter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(PerfettoPath)\perfetto.vcxproj">
+      <Project>{c7e5a2f0-8b3d-4e6a-9f12-3c4d5e6f7a80}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(DxTimingCaptureLibraryRoot)\lib\DxTimingCaptureLibrary.lib.vcxproj">
+      <Project>{bd5d2df6-a412-48d8-a0c9-d220dccb92d3}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

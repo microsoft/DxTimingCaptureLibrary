@@ -1,0 +1,44 @@
+# Visual Studio build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Bb]uild/
+[Oo]ut/
+
+# Visual Studio user-specific files
+*.user
+*.suo
+.vs/
+
+# Build / compiler artifacts
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.idb
+*.tlog
+*.log
+
+# Perfetto capture output
+*.perfetto-trace
+*.pftrace
+
+# More Visual Studio / tooling artifacts
+*.rsuser
+*.aps
+*.binlog
+*.VC.db
+*.VC.opendb
+ipch/
+.vscode/
+*.nupkg
+
+# ETW traces
+*.etl

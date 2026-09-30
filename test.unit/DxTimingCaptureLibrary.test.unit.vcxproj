@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{9ec2c42d-e828-4494-bfb0-c44c193ce04f}</ProjectGuid>
+    <ConfigurationType>Application</ConfigurationType>
+    <RootNamespace>WinPix</RootNamespace>
+    <TargetName>DxTimingCaptureLibrary.test.unit</TargetName>
+    <TestCode>true</TestCode>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>
+        $(GoogleTestPath)\googletest\include;
+        $(PixEventDecoderPath)\include;
+        $(DxTimingCaptureLibraryRoot);
+        %(AdditionalIncludeDirectories);
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>
+        %(AdditionalDependencies);
+        d3d12.lib;
+        dxgi.lib;
+        onecore.lib;
+        uuid.lib;
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="D3D12ObjectProcessorTests.cpp" />
+    <ClCompile Include="DiagnosticsTests.cpp" />
+    <ClCompile Include="DirectStorageTests.cpp" />
+    <ClCompile Include="DxgkDmaPacketDecoderTests.cpp" />
+    <ClCompile Include="GpuEngineActivityCallbackTests.cpp" />
+    <ClCompile Include="GpuPacketTrackerTests.cpp" />
+    <ClCompile Include="NullContractTests.cpp" />
+    <ClCompile Include="EventDataTests.cpp" />
+    <ClCompile Include="RuntimeFailureTests.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="TicksToNanosecondsTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NoOpCallbacks.h" />
+    <ClInclude Include="pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- In a UsePixUtility build, EtwException.h resolves to PIX's
+         WinPix::ToolException (see DxTimingCaptureLibrary/EtwException.h), whose out-of-line
+         symbols live in PixUtility.lib. A standalone build of the library uses the
+         self-contained EtwException and does not need this reference. -->
+    <ProjectReference Condition="'$(UsePixUtility)' == 'true'" Include="$(PixUtilityRoot)\lib\PixUtility.vcxproj">
+      <Project>{6591c7c3-cf78-4150-992d-5e0c0d13e609}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(GoogleTestPath)\googletest_main.vcxproj">
+      <Project>{14629fee-0926-4914-b534-87cd33cbc8ca}</Project>
+    </ProjectReference>
+    <ProjectReference Condition="'$(UseStubPixEventDecoder)' != 'true'" Include="$(PixEventDecoderPath)\lib\PixEventDecoder.lib.vcxproj">
+      <Project>{750cf23a-1b4a-4f62-acb7-45fe8b78a7a7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(DxTimingCaptureLibraryRoot)\lib\DxTimingCaptureLibrary.lib.vcxproj">
+      <Project>{bd5d2df6-a412-48d8-a0c9-d220dccb92d3}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

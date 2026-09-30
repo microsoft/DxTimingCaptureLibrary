@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Standalone build settings for DxTimingCaptureLibrary, extracted from the PIX tree.
+
+  This file is the only thing that differs between a standalone build and an
+  in-tree PIX build; the .vcxproj files reference the variables defined here and
+  are otherwise unchanged. Per-project behaviour keys off properties the projects
+  declare: ConfigurationType, TestCode, and UseStubPixEventDecoder.
+
+  Headers shared with PIX are included unprefixed (<d3d12.h>, <D3D12Events.h>,
+  <lddmcoreeventdefs.h>, <dstorage_etw.h>) so that each build can satisfy them
+  from a different place. Here they come from the Agility SDK NuGet package and
+  from third_party; PIX's equivalent props points the same includes at its own
+  external\d3d and external\DirectStorage.
+
+  A standalone build needs no PIX checkout: everything else resolves from the
+  Windows SDK, NuGet, or third_party.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Supplies d3d12.h, D3D12Events.h and friends. The package's own .targets
+       prepends its include directory, so the Agility headers win over the
+       Windows SDK's. Marker ops that only exist in the preview SDK are guarded
+       in MarkerOp.h, so the stable package is enough. -->
+  <ItemGroup Condition="'$(DxTimingCaptureStandaloneBuild)' == 'true'">
+    <PackageReference Include="Microsoft.Direct3D.D3D12" Version="1.619.5" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <DxTimingCaptureStandaloneBuild Condition="'$(DxTimingCaptureStandaloneBuild)' == ''">true</DxTimingCaptureStandaloneBuild>
+  </PropertyGroup>
+
+  <!-- Debug builds use the debug CRT (/MDd) and no optimization, so Debug
+       consumers can link x64\Debug\lib\DxTimingCaptureLibrary.lib. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <UseDebugLibraries Condition="'$(UseDebugLibraries)' == ''">true</UseDebugLibraries>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DxTimingCaptureLibraryRoot>$(MSBuildThisFileDirectory.TrimEnd('\'))</DxTimingCaptureLibraryRoot>
+    <GoogleTestPath>$(DxTimingCaptureLibraryRoot)\third_party\googletest</GoogleTestPath>
+    <PixEventDecoderPath>$(DxTimingCaptureLibraryRoot)\third_party\PixEventDecoder</PixEventDecoderPath>
+    <PerfettoPath>$(DxTimingCaptureLibraryRoot)\third_party\perfetto</PerfettoPath>
+    <ImguiPath>$(DxTimingCaptureLibraryRoot)\third_party\imgui</ImguiPath>
+    <!-- lddmcoreeventdefs.h and dstorage_etw.h ship in no public SDK or NuGet
+         package, so they are vendored here. In a PIX build these directories
+         are not on the include path and the in-tree copies are used. -->
+    <DxgkEtwPath>$(DxTimingCaptureLibraryRoot)\third_party\dxgk</DxgkEtwPath>
+    <DirectStorageEtwPath>$(DxTimingCaptureLibraryRoot)\third_party\directstorage</DirectStorageEtwPath>
+    <!-- true: compile the DecodeTimingBlock stub and skip the decoder reference.
+         false: link the real PixEventDecoder.lib (e.g. an in-tree PIX build). -->
+    <UseStubPixEventDecoder Condition="'$(UseStubPixEventDecoder)' == ''">true</UseStubPixEventDecoder>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PlatformToolset Condition="'$(PlatformToolset)' == ''">v143</PlatformToolset>
+    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>UNICODE;_UNICODE;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        $(DxTimingCaptureLibraryRoot)\include;
+        $(DxgkEtwPath);
+        $(DirectStorageEtwPath);
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'Application'">
+    <Link>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;onecore.lib;uuid.lib;tdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+</Project>

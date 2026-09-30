@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="AllocationTracker.cpp" />
+    <ClCompile Include="D3D12ObjectProcessor.cpp" />
+    <ClCompile Include="DxTimingCaptureEventHandler.cpp" />
+    <ClCompile Include="PixEventDecoderStub.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AdapterTracker.h" />
+    <ClInclude Include="DirectStorageProcessor.h" />
+    <ClInclude Include="DxTimingCaptureProcessor.h" />
+    <ClInclude Include="Identifiers.h" />
+    <ClInclude Include="MemoryCounterWriter.h" />
+    <ClInclude Include="MonitorTracker.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="PerProcessData.h" />
+    <ClInclude Include="AllocationTracker.h" />
+    <ClInclude Include="D3D12ObjectProcessor.h" />
+  </ItemGroup>
+</Project>
