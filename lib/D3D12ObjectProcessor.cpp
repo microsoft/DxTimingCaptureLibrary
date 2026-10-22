@@ -203,6 +203,7 @@ void D3D12ObjectProcessor::AddDevice(const DeviceEntry& deviceEntry, ApiObjectCa
 {
     UINT64 deviceId;
     ThrowFailure(callbacks->OnDeviceCreation(deviceEntry.Timestamp, &deviceEntry.Data, &deviceId));
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::Device, deviceId, deviceEntry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::Device][deviceEntry.ObjectAddress] = deviceId;
 
     // Process any objects that were waiting for this device id
@@ -904,6 +905,7 @@ void D3D12ObjectProcessor::InsertD3D12Heap(const HeapEntry& entry, ApiObjectCall
             heapPlacement.ResidentSegmentGroup = TryResolveResidentGroup(entry.ObjectAddress);
             ThrowFailure(callbacks->OnHeapCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, &entry.Desc, &heapPlacement, &objectId));
 
+            ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::Heap, objectId, entry.ObjectAddress));
             m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::Heap][entry.ObjectAddress] = objectId;
             this->OnApiObjectInserted({ ApiObjectType::Heap, objectId, entry.ThreadId });
 
@@ -1004,6 +1006,7 @@ void D3D12ObjectProcessor::InsertD3D12Resource(const ResourceEntry& entry, ApiOb
     }
     }
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::Resource, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::Resource][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::Resource, objectId, entry.ThreadId });
 
@@ -1016,6 +1019,7 @@ void D3D12ObjectProcessor::InsertD3D12PipelineState(const PipelineStateEntry& en
     ObjectPlacementInfo placement{ entry.GpuVirtualBaseAddress, entry.Size };
     ThrowFailure(callbacks->OnPipelineStateCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, &placement, &objectId));
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::PipelineState, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::PipelineState][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::PipelineState, objectId, entry.ThreadId });
 
@@ -1028,6 +1032,7 @@ void D3D12ObjectProcessor::InsertD3D12StateObject(const StateObjectEntry& entry,
     ObjectPlacementInfo placement{ entry.GpuVirtualBaseAddress, entry.Size };
     ThrowFailure(callbacks->OnStateObjectCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, &placement, &objectId));
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::StateObject, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::StateObject][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::StateObject, objectId, entry.ThreadId });
 
@@ -1040,6 +1045,7 @@ void D3D12ObjectProcessor::InsertD3D12CommandAllocator(const CommandAllocatorEnt
     ObjectPlacementInfo placement{ entry.GpuVirtualBaseAddress, entry.Size };
     ThrowFailure(callbacks->OnCommandAllocatorCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, static_cast<D3D12_COMMAND_LIST_TYPE>(entry.CommandListType), &placement, &objectId));
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::CommandAllocator, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::CommandAllocator][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::CommandAllocator, objectId, entry.ThreadId });
 
@@ -1057,6 +1063,7 @@ void D3D12ObjectProcessor::InsertD3D12DescriptorHeap(const DescriptorHeapEntry& 
     ObjectPlacementInfo placement{ entry.GpuVirtualBaseAddress, entry.Size };
     ThrowFailure(callbacks->OnDescriptorHeapCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, &desc, &placement, &objectId));
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::DescriptorHeap, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::DescriptorHeap][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::DescriptorHeap, objectId, entry.ThreadId });
 
@@ -1069,6 +1076,7 @@ void D3D12ObjectProcessor::InsertD3D12MetaCommand(const MetaCommandEntry& entry,
     ObjectPlacementInfo placement{ entry.GpuVirtualBaseAddress, entry.Size };
     ThrowFailure(callbacks->OnMetaCommandCreation(entry.Timestamp, entry.DeviceId.value(), entry.ProcessId, entry.ThreadId, entry.CommandId, &placement, &objectId));
 
+    ThrowFailure(callbacks->OnApiObjectAddress(ApiObjectType::MetaCommand, objectId, entry.ObjectAddress));
     m_apiObjectTypeAddressToIds[(size_t)ApiObjectType::MetaCommand][entry.ObjectAddress] = objectId;
     this->OnApiObjectInserted({ ApiObjectType::MetaCommand, objectId, entry.ThreadId });
 

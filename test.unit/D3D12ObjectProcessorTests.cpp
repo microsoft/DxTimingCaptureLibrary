@@ -28,8 +28,8 @@ using namespace DirectX::Etw;
 
 namespace
 {
-    // Records the object-creation and destruction callbacks the processor makes, with
-    // the fields these tests assert on.
+    // Records the object-creation, destruction and object-address callbacks the processor
+    // makes, with the fields these tests assert on.
     class RecordingCallbacks : public ApiObjectCallbacks
     {
     public:
@@ -38,6 +38,7 @@ namespace
         struct ResourceRecord { UINT64 DeviceId; UINT64 GpuVirtualAddress; UINT64 ObjectId; };
         struct HeapRecord { UINT64 DeviceId; UINT64 GpuVirtualAddress; UINT64 ObjectId; };
         struct DestructionRecord { ApiObjectType Type; UINT64 ObjectId; };
+        struct ObjectAddressRecord { ApiObjectType Type; UINT64 ObjectId; UINT64 ObjectAddress; };
 
         std::vector<DeviceRecord> Devices;
         std::vector<CommandAllocatorRecord> CommandAllocators;
@@ -45,6 +46,7 @@ namespace
         std::vector<ResourceRecord> PlacedResources;
         std::vector<HeapRecord> Heaps;
         std::vector<DestructionRecord> Destructions;
+        std::vector<ObjectAddressRecord> ObjectAddresses;
 
         HRESULT OnDeviceCreation(INT64, const DeviceInfo*, UINT64* objectId) override
         {
@@ -84,6 +86,12 @@ namespace
         HRESULT OnObjectDestruction(INT64, ApiObjectType type, UINT64 objectId) override
         {
             Destructions.push_back({ type, objectId });
+            return S_OK;
+        }
+
+        HRESULT OnApiObjectAddress(ApiObjectType type, UINT64 objectId, UINT64 objectAddress) override
+        {
+            ObjectAddresses.push_back({ type, objectId, objectAddress });
             return S_OK;
         }
 
@@ -369,4 +377,86 @@ TEST(D3D12ObjectProcessorTests, Destroy_DeferredPlacedResource_IsCleanedUp)
     fixture.Processor.AddHeap(MakeHeap(HeapAddress), DeviceAddress, &fixture.Callbacks);
 
     EXPECT_TRUE(fixture.Callbacks.PlacedResources.empty()) << "A destroyed deferred resource must not be inserted later";
+}
+
+// --- Object addresses -------------------------------------------------------
+
+TEST(D3D12ObjectProcessorTests, ObjectAddress_ReportedForEachInsertedObject)
+{
+    constexpr uint64_t AllocatorAddress = 0xA000;
+    constexpr uint64_t HeapAddress = 0x6000;
+    constexpr uint64_t ResourceAddress = 0x7000;
+    constexpr uint64_t HeapBaseAddress = 0x300000;
+
+    ProcessorFixture fixture;
+    fixture.Processor.AddDevice(MakeDevice(), &fixture.Callbacks);
+    fixture.Processor.AddCommandAllocator(MakeCommandAllocator(AllocatorAddress, D3D12_COMMAND_LIST_TYPE_DIRECT), DeviceAddress, &fixture.Callbacks);
+
+    // The placed resource is deferred until its heap arrives; its address is reported
+    // when it is finally inserted, not when it is first seen.
+    fixture.Processor.AddResource(MakePlacedResource(ResourceAddress, HeapAddress, 0x100), DeviceAddress, &fixture.Callbacks);
+    fixture.RegisterAllocation(HeapAddress, HeapBaseAddress, 0x10000);
+    fixture.Processor.AddHeap(MakeHeap(HeapAddress), DeviceAddress, &fixture.Callbacks);
+
+    ASSERT_EQ(fixture.Callbacks.Devices.size(), 1u);
+    ASSERT_EQ(fixture.Callbacks.CommandAllocators.size(), 1u);
+    ASSERT_EQ(fixture.Callbacks.Heaps.size(), 1u);
+    ASSERT_EQ(fixture.Callbacks.PlacedResources.size(), 1u);
+
+    // Each address is paired with the id the object's creation callback assigned.
+    const auto& addresses = fixture.Callbacks.ObjectAddresses;
+    ASSERT_EQ(addresses.size(), 4u) << "One address per inserted object";
+    auto find = [&](ApiObjectType type) -> const RecordingCallbacks::ObjectAddressRecord* {
+        for (const auto& record : addresses)
+        {
+            if (record.Type == type)
+            {
+                return &record;
+            }
+        }
+        return nullptr;
+    };
+
+    const auto* device = find(ApiObjectType::Device);
+    ASSERT_NE(device, nullptr);
+    EXPECT_EQ(device->ObjectId, fixture.Callbacks.Devices.front().ObjectId);
+    EXPECT_EQ(device->ObjectAddress, DeviceAddress);
+
+    const auto* allocator = find(ApiObjectType::CommandAllocator);
+    ASSERT_NE(allocator, nullptr);
+    EXPECT_EQ(allocator->ObjectId, fixture.Callbacks.CommandAllocators.front().ObjectId);
+    EXPECT_EQ(allocator->ObjectAddress, AllocatorAddress);
+
+    const auto* heap = find(ApiObjectType::Heap);
+    ASSERT_NE(heap, nullptr);
+    EXPECT_EQ(heap->ObjectId, fixture.Callbacks.Heaps.front().ObjectId);
+    EXPECT_EQ(heap->ObjectAddress, HeapAddress);
+
+    const auto* resource = find(ApiObjectType::Resource);
+    ASSERT_NE(resource, nullptr);
+    EXPECT_EQ(resource->ObjectId, fixture.Callbacks.PlacedResources.front().ObjectId);
+    EXPECT_EQ(resource->ObjectAddress, ResourceAddress);
+}
+
+TEST(D3D12ObjectProcessorTests, ObjectAddress_NotReportedForImpliedCommittedHeap)
+{
+    constexpr uint64_t HeapAddress = 0x8000;
+    constexpr uint64_t ResourceAddress = 0x9000;
+
+    ProcessorFixture fixture;
+    fixture.Processor.AddDevice(MakeDevice(), &fixture.Callbacks);
+
+    // A committed resource's implicit heap is not stored as its own object, so only the
+    // device and the resource get an address.
+    fixture.RegisterAllocation(HeapAddress, 0x200000, 0x10000);
+    fixture.Processor.AddResource(MakeCommittedResource(ResourceAddress), DeviceAddress, &fixture.Callbacks);
+    fixture.Processor.AddHeap(MakeHeap(HeapAddress, /*conjoinedResource*/ ResourceAddress), DeviceAddress, &fixture.Callbacks);
+
+    ASSERT_EQ(fixture.Callbacks.CommittedResources.size(), 1u);
+    const auto& addresses = fixture.Callbacks.ObjectAddresses;
+    ASSERT_EQ(addresses.size(), 2u);
+    EXPECT_EQ(addresses[0].Type, ApiObjectType::Device);
+    EXPECT_EQ(addresses[1].Type, ApiObjectType::Resource);
+    EXPECT_EQ(addresses[1].ObjectId, fixture.Callbacks.CommittedResources.front().ObjectId);
+    EXPECT_EQ(addresses[1].ObjectAddress, ResourceAddress);
 }

@@ -317,6 +317,10 @@ public:
 
     virtual HRESULT OnApiObjectName(INT64 timestamp, ApiObjectType type, UINT64 objectId, std::wstring_view name) = 0;
     virtual HRESULT OnApiObjectSizeAndAddress(INT64 timestamp, ApiObjectType type, UINT64 objectId, UINT64 allocationSize, UINT64 baseAddress) = 0;
+
+    // The D3D12 object's address in the traced process (the interface pointer the app received from
+    // Create*), reported once right after the object's creation callback assigned objectId. Optional.
+    virtual HRESULT OnApiObjectAddress(ApiObjectType type, UINT64 objectId, UINT64 objectAddress) { (void)type; (void)objectId; (void)objectAddress; return S_OK; }
 };
 
 // Optional interface for the D3D12 runtime's "failure journal" - the runtime's

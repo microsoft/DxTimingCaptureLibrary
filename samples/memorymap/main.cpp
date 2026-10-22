@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <evntrace.h>
+#include <tlhelp32.h>
 
 #include <d3d11.h>
 
@@ -191,6 +192,77 @@ namespace
         processId = processInfo.dwProcessId;
         mainThread = processInfo.hThread;
         return true;
+    }
+
+    // Strips the directory and an optional ".exe" so "vramtiming",
+    // "vramtiming.exe" and a full path all compare equal (case-insensitively).
+    std::wstring_view ExeBaseName(std::wstring_view path)
+    {
+        size_t slash = path.find_last_of(L"\\/");
+        if (slash != std::wstring_view::npos)
+        {
+            path.remove_prefix(slash + 1);
+        }
+        if (path.size() > 4 && _wcsnicmp(path.data() + path.size() - 4, L".exe", 4) == 0)
+        {
+            path.remove_suffix(4);
+        }
+        return path;
+    }
+
+    DWORD FindProcessByName(std::wstring_view baseName)
+    {
+        HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE)
+        {
+            return 0;
+        }
+
+        DWORD processId = 0;
+        PROCESSENTRY32W entry{ sizeof(entry) };
+        for (BOOL more = Process32FirstW(snapshot, &entry); more; more = Process32NextW(snapshot, &entry))
+        {
+            std::wstring_view candidate = ExeBaseName(entry.szExeFile);
+            if (entry.th32ProcessID != GetCurrentProcessId() &&
+                candidate.size() == baseName.size() &&
+                _wcsnicmp(candidate.data(), baseName.data(), baseName.size()) == 0)
+            {
+                processId = entry.th32ProcessID;
+                break;
+            }
+        }
+
+        CloseHandle(snapshot);
+        return processId;
+    }
+
+    // The --launch alternative for targets we can't (or don't want to) start
+    // ourselves: polls the process list until <exe> shows up and returns its
+    // pid. Unlike --launch the target is already running by the time the trace
+    // is up, so it should create its D3D12 objects a moment after starting.
+    // Ctrl+C while waiting just ends the process (no session exists yet).
+    DWORD WaitForProcess(const std::wstring& exeName)
+    {
+        std::wstring_view baseName = ExeBaseName(exeName);
+
+        DWORD processId = FindProcessByName(baseName);
+        if (processId != 0)
+        {
+            wprintf(L"%.*ls is already running (pid %lu); attaching. Objects created before now are\n"
+                L"only seen through the ETW rundown, which does not re-emit explicit heaps or\n"
+                L"placed resources.\n",
+                static_cast<int>(baseName.size()), baseName.data(), processId);
+            return processId;
+        }
+
+        wprintf(L"Waiting for %.*ls to start...\n", static_cast<int>(baseName.size()), baseName.data());
+        fflush(stdout);
+        while ((processId = FindProcessByName(baseName)) == 0)
+        {
+            Sleep(5);
+        }
+        wprintf(L"Found %.*ls (pid %lu).\n", static_cast<int>(baseName.size()), baseName.data(), processId);
+        return processId;
     }
 
     // Offline replay of a saved .etl. Runs to completion synchronously.
@@ -811,12 +883,17 @@ namespace
             L"Usage:\n"
             L"  DxTimingCaptureLibrary.sample.memorymap --pid <id> [--dump] [--seconds <n>]\n"
             L"  DxTimingCaptureLibrary.sample.memorymap --launch <exe> [--dump] [--seconds <n>]\n"
+            L"  DxTimingCaptureLibrary.sample.memorymap --wait <exe> [--dump] [--seconds <n>]\n"
             L"  DxTimingCaptureLibrary.sample.memorymap --etl <path> --pid <id> [--dump]\n"
             L"\n"
             L"  --pid <id>     Observe an already-running process.\n"
             L"  --launch <exe> Launch <exe> suspended and capture it from the start.\n"
             L"                 Best for seeing explicit heaps and placed resources,\n"
             L"                 which D3D12's rundown does not re-emit.\n"
+            L"  --wait <exe>   Wait for you to start <exe> (file name, .exe optional),\n"
+            L"                 then capture it. The trace starts just after the process\n"
+            L"                 appears, so it should create its D3D12 objects a moment\n"
+            L"                 after starting.\n"
             L"  --etl <path>   Replay a saved .etl instead of capturing live.\n"
             L"  --demo         Show synthetic data (no GPU or ETW needed).\n"
             L"  --dump         Print the model as text and exit (no window).\n"
@@ -829,6 +906,7 @@ int __cdecl wmain(int argc, wchar_t** argv)
     DWORD processId = 0;
     std::wstring etlFilePath;
     std::wstring launchPath;
+    std::wstring waitName;
     std::wstring recordPath;
     bool dumpMode = false;
     bool demoMode = false;
@@ -886,6 +964,14 @@ int __cdecl wmain(int argc, wchar_t** argv)
                 return 1;
             }
         }
+        else if (arg == L"--wait")
+        {
+            if (!takeValue(waitName))
+            {
+                PrintUsage();
+                return 1;
+            }
+        }
         else if (arg == L"--dump")
         {
             dumpMode = true;
@@ -924,11 +1010,23 @@ int __cdecl wmain(int argc, wchar_t** argv)
         return RunWindow();
     }
 
-    if (processId == 0 && launchPath.empty())
+    if (!waitName.empty() && (processId != 0 || !launchPath.empty() || !etlFilePath.empty()))
     {
-        wprintf(L"Provide --pid, --launch, or --demo.\n");
+        wprintf(L"--wait can't be combined with --pid, --launch or --etl.\n");
+        return 1;
+    }
+
+    if (processId == 0 && launchPath.empty() && waitName.empty())
+    {
+        wprintf(L"Provide --pid, --launch, --wait, or --demo.\n");
         PrintUsage();
         return 1;
+    }
+
+    // From here on --wait behaves exactly like --pid.
+    if (!waitName.empty())
+    {
+        processId = WaitForProcess(waitName);
     }
 
     // ---- Offline replay ----

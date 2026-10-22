@@ -38,6 +38,7 @@ This sample isn't finished yet. Known issues:
 ```
 DxTimingCaptureLibrary.sample.memorymap --pid <id>        # observe a running process
 DxTimingCaptureLibrary.sample.memorymap --launch <exe>    # launch + capture from the start
+DxTimingCaptureLibrary.sample.memorymap --wait <exe>      # wait for you to start <exe>, then capture
 DxTimingCaptureLibrary.sample.memorymap --etl <path> --pid <id>   # replay a saved trace
 DxTimingCaptureLibrary.sample.memorymap --demo            # synthetic data, no GPU/ETW
 ```
@@ -46,6 +47,7 @@ DxTimingCaptureLibrary.sample.memorymap --demo            # synthetic data, no G
 | --- | --- |
 | `--pid <id>` | Observe an already-running process. |
 | `--launch <exe>` | Launch `<exe>` suspended, start the trace, then resume it. Prefer this to see **explicit heaps and placed resources** - D3D12's ETW rundown re-emits committed resources for an already-running process, but not explicit heaps or placed resources, so those only show up when you're capturing from the start. |
+| `--wait <exe>` | Like `--launch`, but you start `<exe>` yourself: polls the process list until it appears (file name only, case-insensitive, `.exe` optional), then captures it like `--pid`. The trace starts just after the process is detected, so the target should create its D3D12 objects a moment after starting (e.g. vramtiming waits 2 s at startup). If it's already running it attaches, with the same rundown caveat as `--pid`. Can't be combined with `--pid`, `--launch` or `--etl`. |
 | `--etl <path>` | Replay a saved `.etl` instead of capturing live (needs `--pid`). |
 | `--demo` | Populate the view with synthetic data - handy to see the layout with no GPU or ETW permissions. |
 | `--dump` | Print the model as text and exit, instead of opening a window. Useful headlessly. |
